@@ -19,7 +19,7 @@ if "GEMINI_API_KEY" not in st.secrets:
 
 # 2. Configure Gemini API
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-# Using gemini-2.0-flash or gemini-1.5-flash
+# Using gemini-3.8-flash or gemini-1.5-flash
 model = genai.GenerativeModel("gemini-2.0-flash")
 
 # Function: PDF Text Extraction
