@@ -1,18 +1,28 @@
 import streamlit as st
-from google import genai
+import google.generativeai as genai
 from pypdf import PdfReader
 
-st.set_page_config(page_title="AI Study Tutor", page_icon="📚", layout="wide")
-st.title("📚 AI Study Tutor")
+# Page Config
+st.set_page_config(
+    page_title="AI Study Tutor",
+    page_icon="📚",
+    layout="wide"
+)
 
-# API Key check
+st.title("📚 AI Study Tutor")
+st.write("Apni PDF upload karein aur uske andar se koi bhi question poochhein!")
+
+# 1. API Key Check
 if "GEMINI_API_KEY" not in st.secrets:
-    st.error("⚠️ Gemini API Key nahi mili!")
+    st.error("⚠️ Gemini API Key nahi mili! App Settings -> Secrets mein GEMINI_API_KEY set karein.")
     st.stop()
 
-# Initialize Client with New SDK
-client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
+# 2. Configure Gemini API
+genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+# Using gemini-2.0-flash or gemini-1.5-flash
+model = genai.GenerativeModel("gemini-2.0-flash")
 
+# Function: PDF Text Extraction
 def extract_text_from_pdf(pdf_file):
     pdf_reader = PdfReader(pdf_file)
     extracted_text = ""
@@ -22,40 +32,58 @@ def extract_text_from_pdf(pdf_file):
             extracted_text += text + "\n"
     return extracted_text
 
-input_type = st.radio("Input Mode Select Karein:", ["Text Entry", "PDF Document Upload"], horizontal=True)
+# 3. PDF Upload Section
+uploaded_file = st.file_uploader("📂 Apni PDF File (Notes/Book) Upload Karein:", type=["pdf"])
 
-context_text = ""
-if input_type == "PDF Document Upload":
-    uploaded_file = st.file_uploader("Apni PDF File Upload Karein", type=["pdf"])
-    if uploaded_file is not None:
-        with st.spinner("PDF reading..."):
-            try:
-                context_text = extract_text_from_pdf(uploaded_file)
-                st.success(f"PDF successfully load ho gayi! ({len(context_text)} characters read)")
-            except Exception as e:
-                st.error(f"PDF error: {e}")
-else:
-    context_text = st.text_area("Apna question/text yahan paste karein:", height=150)
+pdf_text = ""
+if uploaded_file is not None:
+    with st.spinner("PDF parhi ja rahi hai..."):
+        try:
+            pdf_text = extract_text_from_pdf(uploaded_file)
+            st.success(f"✅ PDF successfully load ho gayi! ({len(pdf_text)} characters read)")
+        except Exception as e:
+            st.error(f"❌ PDF read karne mein masla hua: {e}")
 
-option = st.selectbox(
-    "AI Tutor Se Kya Karwana Chahte Hain?",
-    ["Summary & Main Points", "Key Concepts Explanation", "Generate Quiz (MCQs)", "Important Questions for Exam"]
+st.markdown("---")
+
+# 4. Specific Question Input Box
+user_question = st.text_area(
+    "❓ Apna Question yahan paste / type karein:",
+    placeholder="E.g., What was the administrative division in India under the British rule? Explain...",
+    height=120
 )
 
-if st.button("Generate Response", type="primary"):
-    if not context_text.strip():
-        st.warning("Pehle text ya PDF upload karein!")
+# 5. Search / Generate Response
+if st.button("Answer From PDF Notes 🎯", type="primary"):
+    if not pdf_text.strip():
+        st.warning("⚠️ Pehle PDF file upload karein!")
+    elif not user_question.strip():
+        st.warning("⚠️ Pehle apna question type karein!")
     else:
-        full_prompt = f"Role: Academic Tutor.\nTask: {option}\n\nContext:\n{context_text}"
-        
-        with st.spinner("Gemini AI response generate kar raha hai..."):
+        # Strict Prompt to restrict Gemini to the provided PDF context
+        strict_prompt = f"""
+You are a strict academic study assistant.
+
+INSTRUCTIONS:
+1. Answer the user's question using ONLY the provided Study Material below.
+2. If the answer is directly found in the Study Material, explain it clearly based on that content.
+3. If the answer is NOT mentioned or cannot be inferred from the provided Study Material, state clearly: "Is question ka jawab aap ki uploaded PDF notes mein maujood nahi hai." Do not invent information outside the PDF.
+
+---
+STUDY MATERIAL / PDF CONTENT:
+{pdf_text}
+
+---
+USER QUESTION:
+{user_question}
+"""
+
+        with st.spinner("Gemini AI aap ke PDF notes mein se jawab dhoond raha hai..."):
             try:
-                # New SDK syntax
-                response = client.models.generate_content(
-                    model='gemini-3.8-flash',
-                    contents=full_prompt,
-                )
-                st.markdown("### 📌 AI Tutor Output")
+                response = model.generate_content(strict_prompt)
+                
+                st.markdown("### 📌 Jawab (Based on PDF Notes)")
                 st.markdown(response.text)
             except Exception as e:
                 st.error(f"API Error: {e}")
+                
