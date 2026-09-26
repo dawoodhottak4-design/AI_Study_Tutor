@@ -19,8 +19,8 @@ if "GEMINI_API_KEY" not in st.secrets:
 
 # 2. Configure Gemini API
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-# Using gemini-3.8-flash or gemini-1.5-flash
-model = genai.GenerativeModel("gemini-2.0-flash")
+# Using gemini-2.0-flash or gemini-1.5-flash
+model = genai.GenerativeModel("gemini-3.8-flash")
 
 # Function: PDF Text Extraction
 def extract_text_from_pdf(pdf_file):
@@ -86,4 +86,3 @@ USER QUESTION:
                 st.markdown(response.text)
             except Exception as e:
                 st.error(f"API Error: {e}")
-                
