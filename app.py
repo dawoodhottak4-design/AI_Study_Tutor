@@ -18,7 +18,7 @@ if "GEMINI_API_KEY" not in st.secrets:
     st.stop()
 
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-model = genai.GenerativeModel("gemini-3.7-flash")
+model = genai.GenerativeModel("gemini-3.5-flash")
 
 # Function: Full PDF Text Extraction
 def extract_text_from_pdf(pdf_file):
